@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: portfolio
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/app:delegated
+      - /app/node_modules
+    ports:
+      - '3000:3000'
+    environment:
+      # Use the internal docker network host 'db' for the database when running in Docker
+      DATABASE_URL: postgres://postgres:postgres@db:5432/portfolio
+      # Example Clerk envs - set real values in .env.local when needed
+      CLERK_SECRET_KEY: ''
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ''
+    depends_on:
+      db:
+        condition: service_healthy
+    command: [npm, run, dev]
+
+volumes:
+  postgres_data:
